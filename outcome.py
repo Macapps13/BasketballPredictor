@@ -2,6 +2,9 @@ from nba_api.stats.static import teams
 from nba_api.stats.endpoints import leaguegamefinder
 from nba_api.live.nba.endpoints import scoreboard
 from nba_api.live.nba.endpoints import Odds
+from nba_api.stats.endpoints import teamestimatedmetrics
+
+from oddsCalc import generate_odds
 
 import pandas as pd
 import json
@@ -9,6 +12,18 @@ import difflib
 import random
 from datetime import datetime, timezone
 from dateutil import parser
+import math
+from scipy.stats import norm
+
+def win_prob_logistic(net_rating_diff, k=0.12):
+    # Logistic model: P = 1 / (1 + exp(-k * D)), where D = net_rating_diff
+    return 1 / (1 + math.exp(-k * net_rating_diff))
+
+
+def win_prob_normal(net_rating_diff, pace=100, home_adv=0, sigma=12):
+    # Normal model: convert net-rating diff → expected margin, then P = Φ((margin) / σ)
+    margin = net_rating_diff * (pace / 100) + home_adv
+    return norm.cdf(margin / sigma)
 
 def get_teams(): 
     inputTeams = []
@@ -18,14 +33,14 @@ def get_teams():
 
         # Try substring matching first
         matchesFull = [
-            p for p in teams.get_teams()
+            p for p in teamList
             if input_name.lower() in p['full_name'].lower()
         ]
 
         # If no substring matches, fall back to fuzzy matching
         if not matchesFull:
             matchesFull = [
-                p for p in teams.get_teams()
+                p for p in teamList
                 if difflib.SequenceMatcher(None, input_name.lower(), p['full_name'].lower()).ratio() > 0.6
             ]
         if matchesFull:
@@ -62,7 +77,7 @@ def get_game_odds(gameID, home, away):
         if game['gameId'] == gameID:
             for market in game['markets']:
                 for book in market['books']:
-                    if book['countryCode'] == 'US' and market['name'] == '2way':
+                    if (book['countryCode'] == 'AU' or book['countryCode'] == 'US') and market['name'] == '2way':
                         print(f"Book: {book['name']}")
                         for outcome in book['outcomes']:
                             if outcome['type'] == 'home':
@@ -70,9 +85,34 @@ def get_game_odds(gameID, home, away):
                             elif outcome['type'] == 'away':
                                 outcome['type'] = away
                             print(f"{outcome['type']}: {outcome['odds']}")
+            ratings = teamestimatedmetrics.TeamEstimatedMetrics()
+            ratings_df = ratings.get_data_frames()[0]
+            homeID = game['homeTeamId']
+            awayID = game['awayTeamId']
+            home_net = ratings_df.loc[ratings_df['TEAM_ID'] == int(homeID), 'E_NET_RATING'].iloc[0]
+            away_net = ratings_df.loc[ratings_df['TEAM_ID'] == int(awayID), 'E_NET_RATING'].iloc[0]
+            print(f"Estimated Net Ratings - {home}: {home_net}, {away}: {away_net}")
+            if home_net > away_net:
+                print(f"Predicted Winner: {home}")
+            elif away_net > home_net:
+                print(f"Predicted Winner: {away}")
+            print("ENR Diff:", abs(home_net - away_net))
+            wp_logistic = win_prob_logistic(abs(home_net - away_net))
+            wp_normal = win_prob_normal(abs(home_net - away_net))
+            print("Win Probability: " + f"Logistic Model: {wp_logistic*100:.2f}%, Normal Model: {wp_normal*100:.2f}%")
+            calcOdds = generate_odds((wp_logistic + wp_normal) / 2)
+            fair = calcOdds["fair_decimal"]
+            market = calcOdds["market_decimal"]
+            print("Odds: Fair: ", fair, " Market: ", market)
+
+            
+                
+                
+            
 
 
 
+teamList = teams.get_teams()
 board = scoreboard.ScoreBoard()
 games = board.games.get_dict()
 print("See all Odds, or 1 game?")
@@ -89,6 +129,8 @@ elif input == "2":
     team1_id = team1['id']
     team2_id = team2['id']
     gameID, home, away = findGameId(team1_id, team2_id)
+
+
 
 
 
