@@ -105,13 +105,6 @@ def get_game_odds(gameID, home, away):
             market = calcOdds["market_decimal"]
             print("Odds: Fair: ", fair, " Market: ", market)
 
-            
-                
-                
-            
-
-
-
 teamList = teams.get_teams()
 board = scoreboard.ScoreBoard()
 games = board.games.get_dict()
