@@ -4,7 +4,7 @@ from nba_api.live.nba.endpoints import scoreboard
 from nba_api.live.nba.endpoints import Odds
 from nba_api.stats.endpoints import teamestimatedmetrics
 
-from oddsCalc import generate_odds
+from oddsCalc import generate_odds, win_prob_logistic, win_prob_normal
 
 import pandas as pd
 import json
@@ -13,17 +13,6 @@ import random
 from datetime import datetime, timezone
 from dateutil import parser
 import math
-from scipy.stats import norm
-
-def win_prob_logistic(net_rating_diff, k=0.12):
-    # Logistic model: P = 1 / (1 + exp(-k * D)), where D = net_rating_diff
-    return 1 / (1 + math.exp(-k * net_rating_diff))
-
-
-def win_prob_normal(net_rating_diff, pace=100, home_adv=0, sigma=12):
-    # Normal model: convert net-rating diff → expected margin, then P = Φ((margin) / σ)
-    margin = net_rating_diff * (pace / 100) + home_adv
-    return norm.cdf(margin / sigma)
 
 def get_teams(): 
     inputTeams = []
@@ -104,24 +93,43 @@ def get_game_odds(gameID, home, away):
             fair = calcOdds["fair_decimal"]
             market = calcOdds["market_decimal"]
             print("Odds: Fair: ", fair, " Market: ", market)
+            append_result_to_file(away, home, home if home_net - away_net > 0 else away, ((wp_logistic + wp_normal) / 2) * 100)
+
+def append_result_to_file(away, home, team_name, win_percentage):
+    """Append game result and win probability to resultsNBA.txt"""
+    game_str = f"{away} @ {home}"
+    win_str = f"{team_name} Win ({win_percentage:.2f}%)"
+    with open("resultsNBA.txt", "a") as f:
+        f.write(f"{game_str} - {win_str}\n")
 
 teamList = teams.get_teams()
 board = scoreboard.ScoreBoard()
 games = board.games.get_dict()
-print("See all Odds, or 1 game?")
-input = input("1: All Odds\n2: 1 Game\n")
-print("-----")
-if input == "1":
-    for game in games:
-        get_game_odds(game['gameId'], game['homeTeam']['teamName'], game['awayTeam']['teamName'])
-        print("-----")
-elif input == "2":
-    team1, team2 = get_teams()
-    print(f"Team 1: {team1['full_name']}")
-    print(f"Team 2: {team2['full_name']}")
-    team1_id = team1['id']
-    team2_id = team2['id']
-    gameID, home, away = findGameId(team1_id, team2_id)
+
+def main():
+    menu = input("1: All Odds\n2: 1 Game\n3: Exit\n")
+    print("-----")
+    if menu == "1":
+        for game in games:
+            get_game_odds(game['gameId'], game['homeTeam']['teamName'], game['awayTeam']['teamName'])
+            print("-----")
+    elif menu == "2":
+        team1, team2 = get_teams()
+        print(f"Team 1: {team1['full_name']}")
+        print(f"Team 2: {team2['full_name']}")
+        team1_id = team1['id']
+        team2_id = team2['id']
+        gameID, home, away = findGameId(team1_id, team2_id)
+        get_game_odds(gameID, home, away)
+
+    elif menu == "3":
+        exit()
+    else:
+        print("Invalid input")
+    main()
+if __name__ == "__main__":
+    main()
+
 
 
 

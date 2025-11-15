@@ -1,4 +1,5 @@
 import math
+from scipy.stats import norm
 from fractions import Fraction
 
 def generate_odds(p, vig=0.05):
@@ -46,3 +47,13 @@ def generate_odds(p, vig=0.05):
         "market_american": american,
         "market_implied_prob": round(q, 4)
     }
+
+def win_prob_logistic(net_rating_diff, k=0.12):
+    # Logistic model: P = 1 / (1 + exp(-k * D)), where D = net_rating_diff
+    return 1 / (1 + math.exp(-k * net_rating_diff))
+
+
+def win_prob_normal(net_rating_diff, pace=100, home_adv=0, sigma=12):
+    # Normal model: convert net-rating diff → expected margin, then P = Φ((margin) / σ)
+    margin = net_rating_diff * (pace / 100) + home_adv
+    return norm.cdf(margin / sigma)
