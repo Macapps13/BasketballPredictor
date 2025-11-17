@@ -5,6 +5,7 @@ from nba_api.live.nba.endpoints import Odds
 from nba_api.stats.endpoints import teamestimatedmetrics
 
 from oddsCalc import generate_odds, win_prob_logistic, win_prob_normal
+from getStats import get_stats
 
 import pandas as pd
 import json
@@ -120,6 +121,7 @@ def main():
         team1_id = team1['id']
         team2_id = team2['id']
         gameID, home, away = findGameId(team1_id, team2_id)
+        get_stats(team1_id, team2_id)
         get_game_odds(gameID, home, away)
 
     elif menu == "3":
