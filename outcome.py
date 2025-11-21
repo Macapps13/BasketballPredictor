@@ -5,7 +5,7 @@ from nba_api.live.nba.endpoints import Odds
 from nba_api.stats.endpoints import teamestimatedmetrics
 
 from oddsCalc import generate_odds, win_prob_logistic, win_prob_normal
-from getStats import get_stats
+from getStats import save_matrix, get_stats, append_result_to_file
 
 import pandas as pd
 import json
@@ -14,6 +14,8 @@ import random
 from datetime import datetime, timezone
 from dateutil import parser
 import math
+
+
 
 def get_teams(): 
     inputTeams = []
@@ -42,6 +44,7 @@ def get_teams():
             continue
     team1, team2 = inputTeams
     return team1, team2 
+
 
 def findGameId(team1_id, team2_id):
     f = "{gameId}: {awayTeam} @ {homeTeam}  {gameTimeLTZ}" 
@@ -94,21 +97,14 @@ def get_game_odds(gameID, home, away):
             fair = calcOdds["fair_decimal"]
             market = calcOdds["market_decimal"]
             print("Odds: Fair: ", fair, " Market: ", market)
-            append_result_to_file(away, home, home if home_net - away_net > 0 else away, ((wp_logistic + wp_normal) / 2) * 100)
 
-def append_result_to_file(away, home, team_name, win_percentage):
-    """Append game result and win probability to resultsNBA.txt"""
-    game_str = f"{away} @ {home}"
-    win_str = f"{team_name} Win ({win_percentage:.2f}%)"
-    with open("resultsNBA.txt", "a") as f:
-        f.write(f"{game_str} - {win_str}\n")
 
 teamList = teams.get_teams()
 board = scoreboard.ScoreBoard()
 games = board.games.get_dict()
 
 def main():
-    menu = input("1: All Odds\n2: 1 Game\n3: Exit\n")
+    menu = input("1: All Odds\n2: 1 Game\n3: Add learning matrix\n4: Add today's results\n5: Exit\n")
     print("-----")
     if menu == "1":
         for game in games:
@@ -123,8 +119,15 @@ def main():
         gameID, home, away = findGameId(team1_id, team2_id)
         get_stats(team1_id, team2_id)
         get_game_odds(gameID, home, away)
-
     elif menu == "3":
+        for game in games:
+            save_matrix(game['homeTeam']['teamName'], game['awayTeam']['teamName'])
+            print("-----")
+    elif menu == "4":
+        for game in games:
+            outcome = 1 if game['homeTeam']['score'] > game['awayTeam']['score'] else 0
+            append_result_to_file(outcome)
+    elif menu == "5":
         exit()
     else:
         print("Invalid input")
