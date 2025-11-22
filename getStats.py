@@ -87,11 +87,13 @@ def append_result_to_file(outcome):
 board = scoreboard.ScoreBoard()
 games = board.games.get_dict()
 
-for game in games:
-    print(game['homeTeam']['teamName'], "vs", game['awayTeam']['teamName'])
-    print(game['homeTeam']['score'], "-", game['awayTeam']['score'])
-    outcome = 1 if int(game['homeTeam']['score']) > int(game['awayTeam']['score']) else 0
-    append_result_to_file(outcome)
+
+if __name__ == "__main__":
+    for game in games:
+        print(game['homeTeam']['teamName'], "vs", game['awayTeam']['teamName'])
+        print(game['homeTeam']['score'], "-", game['awayTeam']['score'])
+        outcome = 1 if int(game['homeTeam']['score']) > int(game['awayTeam']['score']) else 0
+        append_result_to_file(outcome)
 #save_matrix("Cavaliers", "Rockets")
 #save_matrix("Pacers", "Hornets")
 
