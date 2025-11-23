@@ -45,7 +45,6 @@ def get_game_odds(gameID, home, away):
             market = homeOdds if homeOdds < awayOdds else awayOdds
 
             return {
-                "gameId": gameID,
                 "home": home,
                 "away": away,
                 "fairOdds": fair,
