@@ -6,7 +6,10 @@ from nba_api.stats.endpoints import teamestimatedmetrics
 
 from oddsCalc import generate_odds, win_prob_logistic, win_prob_normal
 
+from flask_cors import CORS
+
 app = Flask(__name__)
+CORS(app) 
 
 def get_game_odds(gameID, home, away):
     odds = Odds()
