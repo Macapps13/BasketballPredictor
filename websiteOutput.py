@@ -47,7 +47,7 @@ def get_game_odds(gameID, home, away):
             return {
                 "home": home,
                 "away": away,
-                "winner": home if (wp_logistic + wp_normal)/2 > 0.5 else away,
+                "winner": home if home_net > away_net else away,
                 "fairOdds": fair,
                 "marketOdds": market,
                 "logisticWinProb": wp_logistic,
